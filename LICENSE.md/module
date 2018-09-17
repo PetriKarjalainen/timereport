@@ -1,7 +1,7 @@
 '
 ' Initial source: https://www.datanumen.com/blogs/quickly-export-total-time-spent-outlook-appointments-color-category/
 ' Modified by PetriKarj to include calendar bookings so that a timesheet can be produced
-'
+' visual basic for applications code for office 365 / 2018 
 '
 
 Sub ExportTimeSpentOnAppointmentsInEachColorCategory()
