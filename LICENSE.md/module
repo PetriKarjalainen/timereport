@@ -1,0 +1,113 @@
+'
+' Initial source: https://www.datanumen.com/blogs/quickly-export-total-time-spent-outlook-appointments-color-category/
+' Modified by PetriKarj to include calendar bookings so that a timesheet can be produced
+'
+'
+
+Sub ExportTimeSpentOnAppointmentsInEachColorCategory()
+    Dim objDictionary As Object
+    Dim objAppointments As Outlook.Items
+    Dim objAppointment As Outlook.AppointmentItem
+    Dim strCategory As String
+    Dim arrCategory As Variant
+    Dim varCategory As Variant
+    Dim objExcelApp As Excel.Application
+    Dim objExcelWorkbook As Excel.Workbook
+    Dim objExcelWorksheet As Excel.Worksheet
+    Dim arrKey As Variant
+    Dim arrItem As Variant
+    Dim i As Long
+    Dim pos As Integer
+    Dim strCategoryAll As String
+    Dim nLastRow As Integer
+    Dim strLine As String
+    Dim thismonth As Integer
+    Dim lastmonth As Integer
+    
+    Set objDictionary = CreateObject("Scripting.Dictionary")
+    Set objAppointments = Application.Session.PickFolder.Items
+  
+    thismonth = Int(Format(Date, "m"))
+    lastmonth = thismonth - 1
+    If lastmonth = 0 Then lastmonth = 12
+    
+    For Each objAppointment In objAppointments
+    
+        arrCategory = Split(objAppointment.Categories, ";")
+        For Each varCategory In arrCategory
+            strCategoryAll = Trim(varCategory)
+
+            
+            While Len(strCategoryAll) > 1
+            pos = InStr(strCategoryAll, ";")
+            
+                If pos > 1 Then
+                    strCategory = Left(strCategoryAll, pos - 1)
+                    strCategoryAll = Right(strCategoryAll, Len(strCategoryAll) - pos)
+                Else
+                    strCategory = strCategoryAll
+                    strCategoryAll = ""
+                End If
+                
+                strCategory = Trim(strCategory)
+                
+                If (Int(Format(objAppointment.Start, "m") = thismonth) Or (Int(Format(objAppointment.Start, "m")) = lastmonth)) Then
+                If objDictionary.Exists(strCategory) Then
+                    objDictionary.Item(strCategory) = objDictionary.Item(strCategory) + objAppointment.Duration / 60 / 7.5
+                Else
+                    objDictionary.Add strCategory, objAppointment.Duration / 60 / 7.5
+                End If
+                End If
+                
+            Wend
+            
+        Next
+    Next
+ 
+    'Create a new Excel workbook for reported hours
+    Set objExcelApp = CreateObject("Excel.Application")
+    Set objExcelWorkbook = objExcelApp.Workbooks.Add
+    Set objExcelWorksheet = objExcelWorkbook.Sheets(1)
+    objExcelApp.Visible = True
+    objExcelWorkbook.Activate
+ 
+    With objExcelWorksheet
+         .Cells(1, 1) = "Color Category"
+         .Cells(1, 1).Font.Bold = True
+         .Cells(1, 1).Font.Size = 14
+         .Cells(1, 2) = "Total Time (days)"
+         .Cells(1, 2).Font.Bold = True
+         .Cells(1, 2).Font.Size = 14
+    End With
+ 
+    arrKey = objDictionary.Keys
+    arrItem = objDictionary.Items
+ 
+    For i = LBound(arrKey) To UBound(arrKey)
+        nLastRow = objExcelWorksheet.Range("B" & objExcelWorksheet.Rows.Count).End(xlUp).Row + 1
+        objExcelWorksheet.Cells(nLastRow, 1) = arrKey(i)
+        objExcelWorksheet.Cells(nLastRow, 2) = Format(arrItem(i), "###.##")
+        objExcelWorksheet.Cells(nLastRow, 3) = "booked days, this and previous month"
+    For Each objAppointment In objAppointments
+        arrCategory = Split(objAppointment.Categories, ";")
+
+        For Each varCategory In arrCategory
+            strCategoryAll = Trim(varCategory)
+            If strCategoryAll = arrKey(i) Then
+                    If (Int(Format(objAppointment.Start, "m") = thismonth) Or (Int(Format(objAppointment.Start, "m")) = lastmonth)) Then
+
+                    nLastRow = objExcelWorksheet.Range("B" & objExcelWorksheet.Rows.Count).End(xlUp).Row + 1
+                    objExcelWorksheet.Cells(nLastRow, 2) = Format(objAppointment.Start, "dd.mm.yyyy")
+                    objExcelWorksheet.Cells(nLastRow, 3) = objAppointment.Subject
+                    End If
+            End If
+        Next
+    Next
+    Next
+
+    objExcelWorksheet.Columns("A:B").AutoFit
+    
+
+
+
+End Sub
